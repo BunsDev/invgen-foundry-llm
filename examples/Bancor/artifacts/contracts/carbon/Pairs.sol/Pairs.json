@@ -1,0 +1,59 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "Pairs",
+  "sourceName": "contracts/carbon/Pairs.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "PairAlreadyExists",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PairDoesNotExist",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "version",
+          "type": "uint8"
+        }
+      ],
+      "name": "Initialized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint128",
+          "name": "pairId",
+          "type": "uint128"
+        },
+        {
+          "indexed": true,
+          "internalType": "Token",
+          "name": "token0",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "Token",
+          "name": "token1",
+          "type": "address"
+        }
+      ],
+      "name": "PairCreated",
+      "type": "event"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

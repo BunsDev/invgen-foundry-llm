@@ -1,0 +1,13 @@
+node_modules
+build
+build-info-*
+package-lock.json
+.cache
+.vscode
+out
+output*
+.tmp
+.venv
+check.json
+invariant_dataset
+.DS_Store

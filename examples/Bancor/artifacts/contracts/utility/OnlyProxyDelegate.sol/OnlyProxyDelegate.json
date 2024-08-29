@@ -1,0 +1,16 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "OnlyProxyDelegate",
+  "sourceName": "contracts/utility/OnlyProxyDelegate.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "UnknownDelegator",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

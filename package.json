@@ -1,0 +1,33 @@
+{
+  "devDependencies": {
+    "@types/node": "20.8.2",
+    "@types/yargs": "^17.0.32",
+    "gts": "^5.2.0",
+    "typescript": "~5.2.0"
+  },
+  "scripts": {
+    "lint": "gts lint",
+    "clean": "gts clean",
+    "compile": "tsc",
+    "fix": "gts fix",
+    "prepare": "npm run compile",
+    "pretest": "npm run compile",
+    "posttest": "npm run lint"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.2.31",
+    "@langchain/openai": "^0.2.8",
+    "@langchain/textsplitters": "^0.0.3",
+    "@langchain/weaviate": "^0.0.4",
+    "abi-to-sol": "^0.8.0",
+    "ethers": "^6.11.1",
+    "glob": "^10.3.12",
+    "js-sha256": "^0.11.0",
+    "langchain": "^0.2.5",
+    "openai": "^4.30.0",
+    "solc-typed-ast": "^18.1.2",
+    "uuid": "^9.0.1",
+    "weaviate-ts-client": "^2.2.0",
+    "yargs": "^17.7.2"
+  }
+}
