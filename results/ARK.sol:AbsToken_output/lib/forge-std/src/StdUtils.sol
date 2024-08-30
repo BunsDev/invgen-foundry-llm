@@ -64,7 +64,7 @@ abstract contract StdUtils {
     }
 
     /// @dev Compute the address a contract will be deployed at for a given deployer address and nonce
-    ///   @notice adapted from Solmate implementation (https://github.com/Rari-Capital/solmate/blob/main/src/utils/LibRLP.sol)
+    ///  @notice adapted from Solmate implementation (https://github.com/Rari-Capital/solmate/blob/main/src/utils/LibRLP.sol)
     function computeCreateAddress(address deployer, uint256 nonce) virtual internal pure returns (address) {
         console2_log_StdUtils("computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.");
         return vm.computeCreateAddress(deployer, nonce);
@@ -94,14 +94,14 @@ abstract contract StdUtils {
     }
 
     /// @dev returns the hash of the init code (creation code + no args) used in CREATE2 with no constructor arguments
-    ///   @param creationCode the creation code of a contract C, as returned by type(C).creationCode
+    ///  @param creationCode the creation code of a contract C, as returned by type(C).creationCode
     function hashInitCode(bytes memory creationCode) internal pure returns (bytes32) {
         return hashInitCode(creationCode, "");
     }
 
     /// @dev returns the hash of the init code (creation code + ABI-encoded args) used in CREATE2
-    ///   @param creationCode the creation code of a contract C, as returned by type(C).creationCode
-    ///   @param args the ABI-encoded arguments to the constructor of C
+    ///  @param creationCode the creation code of a contract C, as returned by type(C).creationCode
+    ///  @param args the ABI-encoded arguments to the constructor of C
     function hashInitCode(bytes memory creationCode, bytes memory args) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(creationCode, args));
     }

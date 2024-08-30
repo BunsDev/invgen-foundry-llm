@@ -35,7 +35,7 @@ async function getRagContext(): Promise<RagContext> {
 async function initializeWeaviateSchema() {
     const client: WeaviateClient = weaviate.client({
         scheme: 'http',
-        host: 'http://localhost:8080',  // I'm using local docker weaviate client
+        host: 'http://localhost:9400',  // I'm using local docker weaviate client
         headers: { 'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY },  // Replace with your inference API key
       });
       
@@ -153,7 +153,6 @@ async function ingestProject(compilation_result: CompileResult, ctx: ContractCon
                                    .withProperties(dataObj)
                                    .withId(generateUuid5(JSON.stringify(dataObj)))
                                    .do();
-        console.log("Writing DataObject: " + JSON.stringify(weaviate_object.id));
     }
 }
 

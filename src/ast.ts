@@ -86,7 +86,7 @@ function writeCtx(ctx: ContractContext, replacements?: Map<string, string>, addi
 }
 
 
-async function tryCompile(contracts: Map<string, string>, remappings: string[], compiler_version: string) {
+async function tryCompile(contracts: Map<string, string>, remappings: string[], compiler_version: string, supressErrors: boolean = false) {
     let compiler_json = {
         language: "Solidity",
         sources: {},
@@ -108,11 +108,15 @@ async function tryCompile(contracts: Map<string, string>, remappings: string[], 
     return await work_on_json(
         "v" + compiler_version,
         compiler_json,
-        null
+        null,
+        supressErrors
     )
 }
 
 function isParsingError (x: string) {
+    if (x === null || x === undefined) {
+        return false;
+    }
     return x.includes("ParserError") || x.includes("SyntaxError: Free functions cannot have visibility.");
 }
 
@@ -133,7 +137,7 @@ async function llmWorkflowOffchain(abi: Map<string, any[]>, ctx: ContractContext
     for (let [key, _] of abi) {
         slugs.push(key);
     }
-    console.log("Function slugs: " + slugs);
+    console.log("Available setup files and contracts: \n" + slugs.join("\n"));
     let matchingSetups = slugs.filter((x) => x.includes(setupContractId));
     if (matchingSetups.length === 0) {
         throw new Error("Setup file not found");
@@ -157,7 +161,7 @@ async function llmWorkflowOffchain(abi: Map<string, any[]>, ctx: ContractContext
         // LLM generate 3 potentialy vulnerabilities for each function
         let previousCtx = characterCtx;
         for (const idx of [0, 1, 2]) {
-            console.log("Generating vulnerability index: " + idx.toString());
+            console.log("Generating vulnerability #" + idx.toString(), "for function", publicFunctionId);
             previousCtx = await generatedAndEvaluateVulnerability(ctx, targetContractId, publicFunctionId, idx, previousCtx, vulnerabilities);
             if (previousCtx == null) {
                 break;
@@ -169,8 +173,11 @@ async function llmWorkflowOffchain(abi: Map<string, any[]>, ctx: ContractContext
     let functionalRes = [];
     let setupFileName = fullSlugToContractId(setupContractId)[0];
     let setupContractOrigCode = getFileCode(ctx, setupFileName);
+    let invariantIdx = 0;
     for (let vulnerability of vulnerabilities) {
+        invariantIdx += 1;
         let { invPrompt, immediateCode } = await createPromptWithSetup(ctx, ragCtx, vulnerability, setupContractId, targetContractId);
+        console.log("Generating invariant for vulnerability: " + vulnerability.vulnerableFunction, ` ${vulnerabilities.length - invariantIdx}/${vulnerabilities.length} vulnerabilities left`);
         let res = await generateAndPatchFromPrompt(ctx, 
                                                 characterCtx,
                                                 remappings,
@@ -235,7 +242,7 @@ async function generateSetupFile(ctx: ContractContext, remappings: string[], tar
 
 async function generatedAndEvaluateVulnerability(ctx: ContractContext, targetContractId: string, publicFunctionId: string, nth: number, previousCtx: OpenAIContext, vulnerabilities: Vulnerability[]): Promise<OpenAIContext> {
     let vulnerabilityPrompt = createPromptForVunlerabilityAnalysis(ctx, targetContractId, publicFunctionId);
-    console.log(vulnerabilityPrompt);
+    // console.log(vulnerabilityPrompt);
     let vulnerabilityCtx = await openaiCompletion(vulnerabilityPrompt, nth, previousCtx.ctx, "user", [
         {
             type: "function",
@@ -267,7 +274,7 @@ async function generatedAndEvaluateVulnerability(ctx: ContractContext, targetCon
     // For each vulnerability, evaluate it once -- give likelihood of it happening and describe how would you invariant test it
     let vulnerability = vulnerabilityTransformer(vulnerabilityCtx);
     let assertionPrompt = createPromptForVulnerabilityAssertion(ctx, vulnerability, targetContractId);
-    console.log(assertionPrompt);
+    // console.log(assertionPrompt);
     vulnerabilityCtx = await openaiCompletion(assertionPrompt, nth, previousCtx.ctx, "user", [
         {
                 type: "function",
@@ -294,7 +301,7 @@ async function generatedAndEvaluateVulnerability(ctx: ContractContext, targetCon
         return null;
     }
     vulnerability = vulnerabilityEvaluationTransformer(vulnerability, vulnerabilityCtx);
-    console.log(vulnerability);
+    // console.log(vulnerability);
     // Skip low likelihood vulnerabilities
     if (vulnerability.vulnerabilityLikelihood === "low" || vulnerability.vulnerabilityLikelihood === "medium") {
         console.log("Vulnerability evaluated to low or medium! Skipping...");
@@ -326,13 +333,11 @@ async function generateAndPatchFromPrompt(ctx: ContractContext,
     for (let j = 0; j < res.length; j++) {
         let r = res[j];
         for (let i = 0; i < RETRIES; i++) {
-            console.log("Retrying setup", i);
             let content = content_rule(r.code.join('\n'));
-            console.log(content);
             let out = await tryCompile(
                 writeCtx(ctx, replacements(id, content), additions(id, content)),
                 remappings, 
-                ctx.compilerVersion) as {
+                ctx.compilerVersion, true) as {
                 success: boolean,
                 message: string,
                 err: string
@@ -342,14 +347,14 @@ async function generateAndPatchFromPrompt(ctx: ContractContext,
                 break
             }
             if (out.err) {
-                throw new Error("Non-syntax error");
+                break;
             }
+            console.log(`Using LLM to fix this invariant, attempt #${i}/${RETRIES}`);
             if (isParsingError(out.message)) {
                 let fixed = false;
                 for (let mutation of mutations) {
                     let content = content_rule(mutation(r.code.join('\n')));
-                    console.log(content);
-                    const newOut = await tryCompile(writeCtx(ctx, replacements(id, content), additions(id, content)), remappings, ctx.compilerVersion) as {
+                    const newOut = await tryCompile(writeCtx(ctx, replacements(id, content), additions(id, content)), remappings, ctx.compilerVersion, true) as {
                         success: boolean,
                         message: string,
                         err: string
@@ -358,14 +363,14 @@ async function generateAndPatchFromPrompt(ctx: ContractContext,
                         fixed = true;
                         out = newOut;
                         r.code = [mutation(r.code.join('\n'))];
-                        console.log(newOut.message)
+                        // console.log(newOut.message)
                         break;
                     }
                 }
-                console.log("ParserError", "Fixed", fixed);
+                // console.log("ParserError", "Fixed", fixed);
                 // // @ts-nocheck
                 if (!fixed) {
-                    console.log("ParserError", "Not fixed");
+                    // console.log("ParserError", "Not fixed");
                     res[j] = await solidityTransformer(prompt, gptIndex);
                     r = res[j];
                     gptIndex += 1;
@@ -373,12 +378,12 @@ async function generateAndPatchFromPrompt(ctx: ContractContext,
             } else {
                 const additionalPrompt = FIX_PROMPT.replace("{{FIX_GUIDELINES}}", FIX_GUIDELINES.join("\n")) + "\n\n" + out.message + "\n\n```solidity"
                 const additionalRes = await solidityTransformer(additionalPrompt, gptIndex, r.ctx);
-                console.log(additionalRes.ctx)
+                // console.log(additionalRes.ctx)
                 gptIndex += 1;
                 res[j].code = additionalRes.code;
                 res[j].ctx = additionalRes.ctx;
                 r = res[j];
-                console.log("fixed....................")
+                // console.log("fixed....................")
             }
             
         }
@@ -602,7 +607,6 @@ async function extractContext(compilation_result: CompileResult): Promise<Contra
         }
     }
 
-    console.log("v:", compilation_result.compilerVersion);
 
     return {
         contractToBase,
@@ -846,7 +850,7 @@ function createPromptForTarget(ctx: ContractContext, contractId: string) {
     let target = contractName + " " + contractName.toLowerCase() + ";"
 
     promptSetup += SETUP_PROMPT_CODE.replace("{{IMPORTS}}", importArr.join("\n")).replace("{{TARGET}}", target);
-    console.log(promptSetup);
+    // console.log(promptSetup);
     return {
         promptSetup,
         immediateSetup: promptSetup.split("```solidity\n")[1]
@@ -874,13 +878,12 @@ function replaceContractName(contract: ASTNode, newName: string) {
 }
 
 async function llmSetUpFile(abi: Map<string, any[]>, ctx: ContractContext, remappings: string[], targetContractId: string) {
-    console.log("ABI: " + JSON.stringify(abi));
+    // console.log("ABI: " + JSON.stringify(abi));
     let slugs = []
     for (let [key, _] of abi) {
-        console.log(key);
         slugs.push(key);
     }
-    console.log("Function slugs: " + slugs);
+    console.log("Available setup files and contracts: \n" + slugs.join("\n"));
     let matchingTargets = slugs.filter((x) => x.includes(targetContractId));
     if (matchingTargets.length === 0) {
         throw new Error("Target file not found");
@@ -904,7 +907,7 @@ async function llmSetUpFile(abi: Map<string, any[]>, ctx: ContractContext, remap
         }
     });
     if (!isSetup) {
-        console.log("Generating a setUp file for", targetContractId);
+        // console.log("Generating a setUp file for", targetContractId);
         // Replace matchingSetupsContractId with newly generated ID
         // Add code for newly generated setup in context
         let { setupId, setupCode } = await generateSetupFile(ctx, remappings, targetContractId)
@@ -972,7 +975,7 @@ async function createPromptWithSetup(ctx: ContractContext, ragCtx: RagContext, v
     }).join("\n\n")
     invPrompt = invPrompt.replace("{{CODE}}", depsCode);
     invPrompt = invPrompt.replace("{{RAG_EXAMPLES}}", referenceInvCode);
-    console.log(invPrompt);
+    // console.log(invPrompt);
 
 
     // @ts-ignore

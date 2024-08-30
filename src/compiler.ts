@@ -27,7 +27,7 @@ async function auto_detect(task_dir: string) {
     return 'solidity_folder';
 }
 
-async function build(project: string, task_dir: string, compiler_version: string) {
+async function build(project: string, task_dir: string, compiler_version: string, supressErrors: boolean = false) {
     if (project === 'hardhat') {
         let promise = new Promise((resolve, reject) => {
             handle_build_info_task(task_dir, hardhat_build_json, resolve);
@@ -162,10 +162,12 @@ async function handleBuildResult(output: {
             };
         };
     };
-}, compiler_version: string, compiler_json: any, contract_name: string | null, starting: any) {
+}, compiler_version: string, compiler_json: any, contract_name: string | null, starting: any, supressErrors: boolean = false) {
     for (let error of output?.errors || []) {
-        if (error['severity'] === 'error') {
-            console.log(`Compilation failed ${error["formattedMessage"]}`)
+        if (error['severity'] === 'error' ) {
+            if (!supressErrors) {
+                console.log(`Compilation failed ${error["formattedMessage"]}`)
+            }
             return { message: error["formattedMessage"], success: false }
         }
     }
@@ -187,7 +189,6 @@ async function handleBuildResult(output: {
         }
     }
 
-    console.log("cv", compiler_version)
     let ast = (await compileJsonData("sample.json", output, compiler_version, []))
     ast.compilerVersion = compiler_version
     return {
@@ -201,7 +202,7 @@ async function work_on_json(compiler_version: string, compiler_json: {
     language: string;
     sources: { [key: string]: { content: string } };
     settings: { [key: string]: any };
-}, contract_name: string | null) {
+}, contract_name: string | null, supressErrors: boolean = false) {
     let promise = new Promise(async (resolve, reject) => {
         let starting = process.hrtime();
         if (!fs.existsSync('.tmp')) {
@@ -223,7 +224,6 @@ async function work_on_json(compiler_version: string, compiler_json: {
         let versionNumber;
         if (match) {
             versionNumber = match[1];
-            console.log('Found version number', versionNumber);
         } else {
             console.log('Could not find version number');
         }
@@ -232,8 +232,9 @@ async function work_on_json(compiler_version: string, compiler_json: {
         if (!fs.existsSync(outputJson)) {
             if (checkSolcSelectInstalled()) {
                 exec(
+                    !supressErrors ? `solc-select use ${versionNumber} --always-install && ` : '' + 
                     `
-                solc-select use ${versionNumber} --always-install && 
+                
                 solc --standard-json < ${currentFile} > ${outputJson}`,
                     async (err, stdout, stderr) => {
                         if (err) {
@@ -243,14 +244,21 @@ async function work_on_json(compiler_version: string, compiler_json: {
                         }
 
                         console.log(stdout);
-
-                        const output = JSON.parse(fs.readFileSync(outputJson, 'utf8'));
+                        
+                        let output;
+                        try {
+                            output = JSON.parse(fs.readFileSync(outputJson, 'utf8'));
+                        } catch (e) {
+                            resolve({ success: false, err: 'solc output parsing failed' });
+                            return;
+                        }
                         const result = await handleBuildResult(
                             output,
                             compiler_version,
                             compiler_json,
                             contract_name,
                             starting,
+                            supressErrors
                         );
 
                         resolve({
@@ -274,13 +282,22 @@ async function work_on_json(compiler_version: string, compiler_json: {
 
                         console.log(stdout);
 
-                        const output = JSON.parse(fs.readFileSync(outputJson, 'utf8'));
+                        let output;
+                        try {
+                            output = JSON.parse(fs.readFileSync(outputJson, 'utf8'));
+                        } catch (e) {
+                            console.log(outputJson)
+                            console.log("Error parsing output", e);
+                            resolve({ success: false, err: 'solc output parsing failed' });
+                            return;
+                        }
                         const result = await handleBuildResult(
                             output,
                             compiler_version,
                             compiler_json,
                             contract_name,
                             starting,
+                            supressErrors
                         );
                         resolve({
                             remappings: compiler_json.settings['remappings'],
@@ -290,8 +307,16 @@ async function work_on_json(compiler_version: string, compiler_json: {
                 );
             }
         } else {
-            const output = JSON.parse(fs.readFileSync(outputJson, 'utf8'));
-            const result = await handleBuildResult(output, compiler_version, compiler_json, contract_name, starting);
+            let output;
+            try {
+                output = JSON.parse(fs.readFileSync(outputJson, 'utf8'));
+            } catch (e) {
+                console.log(outputJson)
+                console.log("Error parsing output", e);
+                resolve({ success: false, err: 'solc output parsing failed' });
+                return;
+            }
+            const result = await handleBuildResult(output, compiler_version, compiler_json, contract_name, starting, supressErrors);
             resolve({
                 remappings: compiler_json.settings['remappings'],
                 ...result,

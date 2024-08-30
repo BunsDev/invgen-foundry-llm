@@ -162,7 +162,7 @@ interface CheatCodes {
     function selectFork(uint256) external;
 
     /// Returns the currently active fork
-    ///   Reverts if no fork is currently active
+    ///  Reverts if no fork is currently active
     function activeFork() external returns (uint256);
 
     function rollFork(uint256) external;

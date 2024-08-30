@@ -1,35 +1,63 @@
+# InvGen
+Generate invariants for Foundry projects using LLM + RAG + Chain of Thought. [Example output](https://github.com/fuzzland/invgen/blob/main/results/ARK.sol%3AAbsToken_output/script/src_ARK_Invaraint.sol#L1324)
+
+
 ## Install
+Ensure you have Node.js and Docker installed. This script will install dependencies and setup Weaviate container.
 ```
-npm install
+git clone https://github.com/fuzzland/invgen.git && cd invgen
+./setup.sh
 ```
 
-## Example
+## Usage
+Generate invariants for a given project (e.g. [ARK](https://github.com/SunWeb3Sec/DeFiHackLabs/tree/main?tab=readme-ov-file#20240324-ark---business-logic-flaw)). 
+The project should be a Foundry project and has a setup file with `setUp` function that deploy the contract-under-test should be provided.
+```bash
+node ./build/src/index.js examples/ark \
+    --project-type=foundry \
+    --compiler-version=0.8.13 \
+    --setup-file=script/ARK.s.sol:InvariantTest \
+    --target-file=src/ARK.sol:AbsToken
+```
+
+The generated invariants will be saved in `results` folder. You can then run the generated invariants by using Foundry or ItyFuzz.
+
+#### Using Foundry:
+```bash
+forge test --match-test testInvariant
+```
+
+
+#### Using ItyFuzz:
+```bash
+ityfuzz evm -m testInvariant -- forge test
+```
+
+
+## Retrain
 #### 1. Create Retreival Augmented Generation (RAG) Database
-First set up an RAG database as docker container. Notice that this container will use `localhost:8080`.
+First set up an RAG database as docker container. Notice that this container will use `localhost:9400`.
 ```
 # Start Weaviate vector DB
 cd weaviate
 docker compose up -d
 ```
 #### 2. Fill RAG Database
-Run TestGen on any target project with the `--retrain` flag set. TestGen will parse all example projects located in `invariant_dataset` folder and write their invariant tests into Weaviate DB for RAG retrieval. 
-
-To keep the codebase concise, `invariant_dataset` folder is git ignored. You can find one containing 155 sample projects on `Dev1` server `gmq/testgen`.
-
-```
-node ./build/src/index.js examples/ARK --project-type=foundry --compiler-version=0.8.13 --setup-file=script/ARK.s.sol:InvariantTest --target-file=src/ARK.sol:AbsToken --retrain
-```
-
-#### 3. Generate Invariants For A Given Smart Contract
-An example generating potential vulnerabilities and corresponding invariant tests for [ARK](https://github.com/SunWeb3Sec/DeFiHackLabs/tree/main?tab=readme-ov-file#20240324-ark---business-logic-flaw), a project hacked in March 2024.
-
-In this case:
-- The project-under-test is located at `examples/ARK`.
-- The invariant test contract with setup code is located at `${PROJECT_PATH}/script/ARK.s.sol` with contract name `InvariantTest`.
-- The contract-under-test is located at `${PROJECT_PATH}/src/ARK.sol` with contract name `AbsToken`.
-
+You can create your own invariant dataset by putting Foundry projects into `invariant_dataset` folder or use the one we have collected. To use our dataset, run
 ```bash
-# Generate invariant tests for AbsToken contract in project ARK.
-node ./build/src/index.js examples/ARK --project-type=foundry --compiler-version=0.8.13 --setup-file=script/ARK.s.sol:InvariantTest --target-file=src/ARK.sol:AbsToken
+wget https://ityfuzz.assets.fuzz.land/db.tar.gz && tar -xzf db.tar.gz
 ```
-[Output identifying the vulnerability and writing a test for it](https://github.com/fuzzland/testgen/blob/main/results/ARK.sol%3AAbsToken_output/script/src_ARK_Invaraint.sol#L1324)
+
+#### 3. Retrain
+Run any project with the retrain flag to generate a new model.
+```bash
+node ./build/src/index.js examples/ark \
+    --project-type=foundry \
+    --compiler-version=0.8.13 \
+    --setup-file=script/ARK.s.sol:InvariantTest \
+    --target-file=src/ARK.sol:AbsToken
+    --retrain # <= add this flag to retrain the model
+```
+
+
+

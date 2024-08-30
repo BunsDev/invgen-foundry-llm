@@ -4,7 +4,7 @@ pragma solidity >=0.6.2<0.9.0;
 import { IERC721Metadata } from "../interfaces/IERC721.sol";
 
 /// @notice This is a mock contract of the ERC721 standard for testing purposes only, it SHOULD NOT be used in production.
-///   @dev Forked from: https://github.com/transmissions11/solmate/blob/0384dbaaa4fcb5715738a9254a7c0a4cb62cf458/src/tokens/ERC721.sol
+///  @dev Forked from: https://github.com/transmissions11/solmate/blob/0384dbaaa4fcb5715738a9254a7c0a4cb62cf458/src/tokens/ERC721.sol
 contract MockERC721 is IERC721Metadata {
     string internal _name;
     string internal _symbol;
@@ -43,7 +43,7 @@ contract MockERC721 is IERC721Metadata {
     }
 
     /// @dev To hide constructor warnings across solc versions due to different constructor visibility requirements and
-    ///   syntaxes, we add an initialization function that can be called only once.
+    ///  syntaxes, we add an initialization function that can be called only once.
     function initialize(string memory name_, string memory symbol_) public {
         require(!initialized, "ALREADY_INITIALIZED");
         _name = name_;

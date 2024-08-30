@@ -4,7 +4,7 @@ pragma solidity >=0.6.2<0.9.0;
 import { IERC20 } from "../interfaces/IERC20.sol";
 
 /// @notice This is a mock contract of the ERC20 standard for testing purposes only, it SHOULD NOT be used in production.
-///   @dev Forked from: https://github.com/transmissions11/solmate/blob/0384dbaaa4fcb5715738a9254a7c0a4cb62cf458/src/tokens/ERC20.sol
+///  @dev Forked from: https://github.com/transmissions11/solmate/blob/0384dbaaa4fcb5715738a9254a7c0a4cb62cf458/src/tokens/ERC20.sol
 contract MockERC20 is IERC20 {
     string internal _name;
     string internal _symbol;
@@ -43,7 +43,7 @@ contract MockERC20 is IERC20 {
     }
 
     /// @dev To hide constructor warnings across solc versions due to different constructor visibility requirements and
-    ///   syntaxes, we add an initialization function that can be called only once.
+    ///  syntaxes, we add an initialization function that can be called only once.
     function initialize(string memory name_, string memory symbol_, uint8 decimals_) public {
         require(!initialized, "ALREADY_INITIALIZED");
         _name = name_;

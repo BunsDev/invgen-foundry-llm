@@ -2,7 +2,7 @@
 pragma solidity >=0.6.2<0.9.0;
 
 /// @author philogy <https://github.com/philogy>
-///   @dev Code generated automatically by script.
+///  @dev Code generated automatically by script.
 library safeconsole {
     uint256 internal constant CONSOLE_ADDR = 0x000000000000000000000000000000000000000000636F6e736F6c652e6c6f67;
 

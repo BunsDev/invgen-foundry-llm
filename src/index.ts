@@ -72,7 +72,6 @@ const argv = yargs(hideBin(process.argv))
                 let res_count = 0;
                 res.forEach(
                     async ({ success, abi, ast, remappings }) => {
-                        try {
                             console.log("Built and processing content #" + res_count);
                             res_count += 1;
                             if (!success) throw new Error('Failed to build project');
@@ -81,7 +80,6 @@ const argv = yargs(hideBin(process.argv))
                             // console.log("Target Project AST: " + JSON.stringify(ast));
                             // Generate setUp() contract for targetFile, if not provided
                             if (setupContractId == "") {
-                                console.log("remappings: " + JSON.stringify(remappings));
                                 let absPath = path.resolve( "results/" + targetContractId.split("/").pop() + "_output");
                                 let setupRes = await llmSetUpFile(abi, ctx, remappings, targetContractId);
                                 writeCtxToFolders(ctx, absPath, null, remappings);
@@ -106,9 +104,6 @@ const argv = yargs(hideBin(process.argv))
                                 setupContractId,
                                 targetContractId
                             );
-                        } catch(e) {
-                            console.log("Processing content failed with message: " + e);
-                        }
                     }
                 )
             }
